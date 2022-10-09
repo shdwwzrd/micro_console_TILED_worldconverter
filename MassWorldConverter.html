@@ -1,0 +1,241 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+</head>
+<body>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>  
+<table width="100%"><tr><td width="50%">	
+	Entity Templates:<input type='file' id='templates' multiple> 
+    <hr /> 
+	Map TMX:<input type='file' id='mapfile' multiple> 
+    <hr /> 
+	MapData/Chunk/Object:<br>
+	<textarea id="C_code" style="width:512;height:256;"></textarea>
+    <hr />
+	World Data<br>
+	<input id="room_count" name="room_count" type="number"><br>	<br>
+	<textarea id="world_c_code" style="width:512;height:256;"></textarea>
+	</td></tr>
+	</table>
+	<script type="text/javascript">			
+            var MarkerX=0;
+            var MarkerY=0;
+            var TileWidth = 0;
+            var TileHeight = 0;
+            var scale = 1;
+
+            var MapData = [];
+            var MapData2 = [];
+            var ChunkData2 = [];
+            var ObjectData2 = [];
+            var MapWidth = [];
+            var MapHeight = [];
+            var mousePos ={x:0,y:0};
+            var removeLine = false;
+            var filename = [];
+            var templateData = [];
+            
+            var map_id = 0;
+            
+            var templateFiles = document.getElementById('templates'); // the input element of type file
+            templateFiles.onchange = function(e) {
+                templateData = [];
+                console.log(e.target.files);
+                var input, file, fr;  	
+                var file_list = e.target.files;
+                for(var i=0;i<file_list.length;i++){
+                    file = file_list[i];
+                    fr = new FileReader();
+                    fr.onloadend = (function(file){
+                        return function(e){
+                            receivedtemplateText(e,file);
+                        }
+                    })(file_list[i]);
+                    fr.readAsText(file);
+                }				
+                function receivedtemplateText(e,file) {
+                    console.log(e);
+                    console.log(file);
+                    var xmlDoc = $.parseXML(e.target.result);
+                    console.log(xmlDoc);
+
+                    templateData[file.name] = [];
+                    templateData[file.name]['type'] = $(xmlDoc).find("object").attr("type");
+                    templateData[file.name]['class'] = $(xmlDoc).find("object").attr("class");
+					if(typeof(templateData[file.name]['class']) !== 'undefined'){
+					console.log(typeof(templateData[file.name]['class']));
+						templateData[file.name]["type"] = templateData[file.name]["class"];							
+					}
+                    templateData[file.name]['width'] = $(xmlDoc).find("object").attr("width");
+                    templateData[file.name]['height'] = $(xmlDoc).find("object").attr("height");
+                    $(xmlDoc).find('properties').each(function() {
+                        //echo properties of the node
+                        $.each(this.children, function(){
+                            $.each(this.attributes, function(i, attrib){
+                                var name = attrib.name;
+                                var value = attrib.value;
+                                templateData[file.name]['special'] = value;
+                            });
+                        });						
+                    });
+                    console.log(templateData);		
+                }				
+            }	
+
+            var mapfile = document.getElementById('mapfile'); // the input element of type file
+            mapfile.onchange = function(e) {
+                console.log(e.target.files);
+                var input, file, fr;  	
+                var file_list = e.target.files;
+                for(var i=0;i<file_list.length;i++){
+                    file = file_list[i];
+                    fr = new FileReader();
+                    fr.onloadend = (function(file){
+                        return function(e){
+                            receivedText(e,file);
+                        }
+                    })(file_list[i]);
+                    fr.readAsText(file);
+                    console.log(file_list[i].name);
+                    filename[i] = file_list[i].name.substring(0,file_list[i].name.indexOf("."));
+                }				
+                function receivedText(e,file) {
+                    console.log(e);
+                    console.log(file);
+                    var xmlDoc = $.parseXML(e.target.result);
+                    var map = $(xmlDoc).find("data")
+
+                    Map_data = map.text().split(",");
+                    Map_data2 = Map_data.slice();
+                    for(index=0;index < Map_data2.length;++index){
+                        Map_data2[index]--;
+                    }
+                    map_width = $(xmlDoc).find("layer").attr("width");
+                    map_height = $(xmlDoc).find("layer").attr("height");
+                    console.log(map_width + "x" + map_height);
+                    console.log(Map_data2);
+
+                    object_id=0;
+                    ObjData = [];
+                    $(xmlDoc).find('objectgroup').each(function() {
+                        //echo properties of the node
+                        $.each(this.children, function(){
+                            ObjData[object_id]=[];
+                            console.log(this);
+                            if(typeof(this.attributes['template']) !== 'undefined'){
+                                template_name = this.attributes['template'].value.substring(this.attributes['template'].value.lastIndexOf("/") + 1);
+                                console.log(template_name);
+                            }
+                            $.each(this.attributes, function(i, attrib){
+                                var name = attrib.name;
+                                var value = attrib.value;
+                                ObjData[object_id][name] = value;
+                            });
+							if("class" in ObjData[object_id]){
+                                ObjData[object_id]["type"] = ObjData[object_id]["class"];							
+							}
+                            if(typeof(this.children[0]) !== 'undefined'){
+                                if(typeof(this.children[0].children[0]) !== 'undefined'){
+                                    var target = this.children[0].children[0];
+                                        ObjData[object_id]['special'] = target.attributes['value'].value;
+                                        console.log(target.attributes['value'].value);
+                                    }
+                                }
+                                if(typeof(template_name)!=='undefined'){
+                                    ObjData[object_id]["y"] -= templateData[template_name]["height"];
+									if("type" in templateData[template_name]){
+										ObjData[object_id]["type"] = templateData[template_name]["type"];
+									}else{
+										ObjData[object_id]["type"] = templateData[template_name]["class"];
+									}
+                                    ObjData[object_id]["special"] = templateData[template_name]["special"];
+                                }else{
+                                    ObjData[object_id]["y"] -= ObjData[object_id]["height"];
+                                }
+                                object_id++;
+                            });						
+                        });
+                        console.log(ObjData);
+                        var t = MapData.length;					
+                        MapData[t] = Map_data;
+                        MapData2[t] = Map_data2;
+                        MapHeight[t] = map_height;
+                        MapWidth[t] = map_width;
+                        ObjectData2[t] = ObjData;
+                        UpdateMapData2()			
+                    }				
+            }			
+
+
+
+            function UpdateMapData2(){				
+                //rebuild map2
+                for(var i=0;i<MapData2.length;i++){
+                    MapData2[i] = MapData[i].slice();
+                    for(index=0;index < MapData2[i].length;++index){
+                        MapData2[i][index]--;
+                    }
+                }
+                updateOutput();
+            }
+						
+	
+	
+            function updateOutput(){
+                    console.log("updating output");
+                    var result="";
+                    for(var i=0;i<MapData2.length;i++){
+                            var ObjectDataString="";
+                            var count=0;
+                            for (var oi in ObjectData2[i])
+                            {
+                                    count+=1;
+                                    if(oi==0){
+                                            ObjectDataString+=ObjectData2[i][oi].type
+                                            ObjectDataString+=","+ObjectData2[i][oi].x
+                                            ObjectDataString+=","+ObjectData2[i][oi].y
+                                            ObjectDataString+=","+ObjectData2[i][oi].special
+                                    }else{
+                                            ObjectDataString+=","+"\n";
+                                            ObjectDataString+=ObjectData2[i][oi].type
+                                            ObjectDataString+=","+ObjectData2[i][oi].x
+                                            ObjectDataString+=","+ObjectData2[i][oi].y
+                                            ObjectDataString+=","+ObjectData2[i][oi].special
+                                    }
+                            }
+                            result+= "const uint8_t MapData"+filename[i]+"[] PROGMEM = {\n"+MapWidth[i]+","+MapHeight[i]+","+MapData2[i]+"\n};\nconst uint16_t ObjectData"+filename[i]+"[] PROGMEM = {\n"+count+",\n"+ObjectDataString+"\n};\n";
+
+                    }
+                    document.getElementById("C_code").value = result;
+            }
+		
+		
+		
+            var room_count = 0;
+            $("input[type=number]").bind('keyup input', function(){
+                    //compress map data bits per tile or per chunk if sectional
+                    room_count = this.value;
+                    UpdateWorldExport();
+            });
+
+            function UpdateWorldExport(){
+                MapDataString = "";
+                ChunkDataString = "";
+                ObjectDataString = "";
+                for(var i=0;i<room_count;i++){
+                    if(i==0){
+                        MapDataString+="MapData"+i;
+                        ChunkDataString+="ChunkData"+i;
+                        ObjectDataString+="ObjectData"+i;
+                    }else{
+                        MapDataString+=",MapData"+i;
+                        ChunkDataString+=",ChunkData"+i;
+                        ObjectDataString+=",ObjectData"+i;
+                    }
+                }
+                document.getElementById("world_c_code").value = "const uint8_t* const WorldMap[] PROGMEM = {\n"+MapDataString+"\n};\nconst uint16_t* const WorldObjects[] PROGMEM = {\n"+ObjectDataString+"\n};";
+
+            }
+    </script>
+</body>
+</html>
