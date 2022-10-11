@@ -203,7 +203,7 @@
                                             ObjectDataString+=","+ObjectData2[i][oi].special
                                     }
                             }
-                            result+= "const uint8_t MapData"+filename[i]+"[] = {\n"+MapWidth[i]+","+MapHeight[i]+","+MapData2[i]+"\n};\nconst uint16_t ObjectData"+filename[i]+"[] PROGMEM = {\n"+count+",\n"+ObjectDataString+"\n};\n";
+                            result+= "const uint8_t MapData"+filename[i]+"[] = {\n"+MapWidth[i]+","+MapHeight[i]+","+MapData2[i]+"\n};\nconst uint16_t ObjectData"+filename[i]+"[] = {\n"+count+",\n"+ObjectDataString+"\n};\n";
 
                     }
                     document.getElementById("C_code").value = result;
@@ -233,7 +233,7 @@
                         ObjectDataString+=",ObjectData"+i;
                     }
                 }
-                document.getElementById("world_c_code").value = "const uint8_t* const WorldMap[] PROGMEM = {\n"+MapDataString+"\n};\nconst uint16_t* const WorldObjects[] PROGMEM = {\n"+ObjectDataString+"\n};";
+                document.getElementById("world_c_code").value = "const uint8_t* const WorldMap[] = {\n"+MapDataString+"\n};\nconst uint16_t* const WorldObjects[] = {\n"+ObjectDataString+"\n};";
 
             }
     </script>
