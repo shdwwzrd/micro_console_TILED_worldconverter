@@ -122,6 +122,7 @@
                         $.each(this.children, function(){
                             ObjData[object_id]=[];
                             console.log(this);
+							template_name = undefined;
                             if(typeof(this.attributes['template']) !== 'undefined'){
                                 template_name = this.attributes['template'].value.substring(this.attributes['template'].value.lastIndexOf("/") + 1);
                                 console.log(template_name);
